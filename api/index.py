@@ -11,8 +11,6 @@ from openai import OpenAI
 # Load environment variables
 load_dotenv()
 
-app = FastAPI()
-
 # --- Models ---
 class ChatInput(BaseModel):
     user_id: str
@@ -22,6 +20,9 @@ class MemoryInput(BaseModel):
     user_id: str
     content: str
     tags: Optional[List[str]] = []
+
+# --- App Instance ---
+app = FastAPI()
 
 # --- Clients ---
 def get_clients():
@@ -47,23 +48,16 @@ async def ping():
 async def chat(input_data: ChatInput):
     try:
         supabase, openai = get_clients()
-        
-        # 1. Embed
         emb = openai.embeddings.create(input=[input_data.query], model="text-embedding-ada-002")
         vector = emb.data[0].embedding
-        
-        # 2. Search
         rpc = supabase.rpc("match_global_memories", {
             "p_user_id": input_data.user_id,
             "query_embedding": vector,
             "match_threshold": 0.5,
             "match_count": 5
         }).execute()
-        
         memories = rpc.data or []
         context = "\n".join([f"[{m.get('domain', 'general')}]: {m.get('content', '')}" for m in memories])
-        
-        # 3. AI
         res = openai.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -72,7 +66,6 @@ async def chat(input_data: ChatInput):
             ],
             max_tokens=400
         )
-        
         return {"response": res.choices[0].message.content}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e), "trace": traceback.format_exc()})
@@ -81,19 +74,14 @@ async def chat(input_data: ChatInput):
 async def memory(domain: str, input_data: MemoryInput):
     try:
         supabase, openai = get_clients()
-        
-        # 1. Embed
         emb = openai.embeddings.create(input=[input_data.content], model="text-embedding-ada-002")
         vector = emb.data[0].embedding
-        
-        # 2. Save
         supabase.table(f"{domain}_memories").insert({
             "user_id": input_data.user_id,
             "content": input_data.content,
             "embedding": vector,
             "tags": input_data.tags
         }).execute()
-
         supabase.table("global_memories").insert({
             "user_id": input_data.user_id,
             "domain": domain,
@@ -101,7 +89,6 @@ async def memory(domain: str, input_data: MemoryInput):
             "embedding": vector,
             "tags": input_data.tags
         }).execute()
-        
         return {"status": "success"}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
