@@ -105,6 +105,3 @@ async def memory(domain: str, input_data: MemoryInput):
         return {"status": "success"}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
-
-# Explicit handler assignment for Vercel legacy builder
-handler = app
