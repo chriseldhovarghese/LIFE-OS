@@ -30,14 +30,18 @@ def get_clients():
     o_key = os.environ.get("OPENAI_API_KEY")
     
     if not all([url, key, o_key]):
-        raise ValueError("Missing environment variables on Vercel")
+        raise ValueError("Environment variables not configured in Vercel")
         
     return create_client(url, key), OpenAI(api_key=o_key)
 
 # --- Endpoints ---
 @app.get("/api/health")
-def health():
-    return {"status": "Aura Phoenix Live", "vars": bool(os.environ.get("OPENAI_API_KEY"))}
+async def health():
+    return {"status": "Aura Final Operational", "env": "vercel"}
+
+@app.get("/api/ping")
+async def ping():
+    return {"status": "pong"}
 
 @app.post("/api/chat")
 async def chat(input_data: ChatInput):
@@ -98,6 +102,9 @@ async def memory(domain: str, input_data: MemoryInput):
             "tags": input_data.tags
         }).execute()
         
-        return {"status": "committed"}
+        return {"status": "success"}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
+
+# Explicit handler assignment for Vercel legacy builder
+handler = app
