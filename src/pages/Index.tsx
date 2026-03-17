@@ -21,134 +21,111 @@ const Index = () => {
 
 
   return (
-    <div className="min-h-screen flex flex-col overflow-hidden">
-      {/* Animated background gradient */}
-      <div
-        className={cn(
-          "fixed inset-0 transition-all duration-1000 opacity-30",
-          currentDomain === "learn" && "bg-gradient-to-br from-blue-900/30 via-background to-purple-900/30",
-          currentDomain === "finance" && "bg-gradient-to-br from-emerald-900/30 via-background to-teal-900/30",
-          currentDomain === "health" && "bg-gradient-to-br from-red-900/30 via-background to-orange-900/30"
-        )}
-      />
-
-      {/* Floating accent particles */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+    <div className="min-h-screen flex flex-col overflow-hidden text-foreground">
+      {/* Dynamic Aurora Background */}
+      <div className="aurora-container">
         <div
           className={cn(
-            "absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-3xl opacity-20 transition-all duration-1000",
-            currentDomain === "learn" && "gradient-learn",
-            currentDomain === "finance" && "gradient-finance",
-            currentDomain === "health" && "gradient-health"
+            "aurora-blob w-[500px] h-[500px] -top-20 -left-20 transition-colors duration-1000",
+            currentDomain === "learn" && "bg-blue-600",
+            currentDomain === "finance" && "bg-emerald-600",
+            currentDomain === "health" && "bg-red-600",
+            currentDomain === "general" && "bg-purple-600"
           )}
         />
         <div
           className={cn(
-            "absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full blur-3xl opacity-20 transition-all duration-1000",
-            currentDomain === "learn" && "gradient-learn",
-            currentDomain === "finance" && "gradient-finance",
-            currentDomain === "health" && "gradient-health"
+            "aurora-blob w-[600px] h-[600px] -bottom-40 -right-20 transition-colors duration-1000 delay-300",
+            currentDomain === "learn" && "bg-indigo-600",
+            currentDomain === "finance" && "bg-teal-600",
+            currentDomain === "health" && "bg-orange-600",
+            currentDomain === "general" && "bg-pink-600"
           )}
         />
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" />
       </div>
 
       {/* Content */}
-      <div className="relative z-10 flex flex-col min-h-screen">
+      <div className="relative z-10 flex flex-col h-screen">
         <TopNav />
         
-        <div className="flex flex-1 gap-4 p-4 overflow-hidden">
+        <main className="flex flex-1 gap-6 p-6 overflow-hidden">
           <DomainSidebar
             currentDomain={currentDomain}
             onDomainChange={setCurrentDomain}
           />
           
-          <div className="flex-1 flex flex-col gap-4 overflow-hidden">
+          <div className="flex-1 flex flex-col gap-6 overflow-hidden">
             {currentDomain === "general" ? (
-              <>
-                {/* Dashboard Section for General AI */}
-                <div className="overflow-y-auto pb-4 space-y-6">
-                  {/* Header */}
-                  <div className="text-center animate-fade-in">
-                    <h2 className="text-3xl md:text-4xl font-bold mb-2 tracking-tight">
-                      LIFEOS AI
-                    </h2>
-                    <div className="relative inline-block">
-                      <p className="text-lg md:text-xl font-light italic text-muted-foreground">
-                        Summarise, life.
-                      </p>
-                      <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent animate-glow" />
-                    </div>
+              <div className="flex-1 overflow-y-auto pr-2 space-y-8 animate-fade-in custom-scrollbar">
+                {/* Hero Header */}
+                <div className="text-center py-8">
+                  <h2 className="text-5xl font-bold mb-4 tracking-tighter bg-gradient-to-b from-white to-white/40 bg-clip-text text-transparent">
+                    AURA LIFE
+                  </h2>
+                  <div className="relative inline-block px-8">
+                    <p className="text-xl font-light tracking-widest text-white/60 uppercase">
+                      Intelligent Living
+                    </p>
+                    <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent animate-glow" />
                   </div>
+                </div>
 
-                  {/* Dashboard Cards Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <DashboardCard
-                      domain="learn"
-                      icon={Brain}
-                      title="Learning Progress"
-                      stats={[
-                        { label: "Hours Studied", value: "0h" },
-                        { label: "Topics Covered", value: "0" },
-                        { label: "Skill Growth", value: "0%" },
-                      ]}
-                      chartData={[]}
-                      chartType="line"
-                    />
-                    
-                    <DashboardCard
-                      domain="finance"
-                      icon={Wallet}
-                      title="Financial Health"
-                      stats={[
-                        { label: "Weekly Savings", value: "$0" },
-                        { label: "Expense Trend", value: "0%" },
-                        { label: "Total Saved", value: "$0" },
-                      ]}
-                      chartData={[]}
-                      chartType="bar"
-                    />
-                    
+                {/* Grid Layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-2 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <DashboardCard
+                        domain="learn"
+                        icon={Brain}
+                        title="Learning"
+                        stats={[{ label: "Topics", value: "12" }, { label: "Hours", value: "48" }, { label: "Focus", value: "92%" }]}
+                        chartData={[10, 20, 15, 30, 25, 40]}
+                        chartType="line"
+                      />
+                      <DashboardCard
+                        domain="finance"
+                        icon={Wallet}
+                        title="Finance"
+                        stats={[{ label: "Savings", value: "$2.4k" }, { label: "Growth", value: "+12%" }, { label: "Budget", value: "On Track" }]}
+                        chartData={[{ name: "A", saving: 400, spending: 240 }, { name: "B", saving: 300, spending: 139 }]}
+                        chartType="bar"
+                      />
+                    </div>
+                    <ChatInterface currentDomain={currentDomain} />
+                  </div>
+                  
+                  <div className="space-y-6">
                     <DashboardCard
                       domain="health"
                       icon={Heart}
-                      title="Wellness Overview"
-                      stats={[
-                        { label: "Mood Score", value: "0/10" },
-                        { label: "Steps Today", value: "0" },
-                        { label: "Sleep", value: "0h" },
-                      ]}
-                      chartData={0}
+                      title="Wellness"
+                      stats={[{ label: "Sleep", value: "7.5h" }, { label: "Steps", value: "8.4k" }, { label: "Vibe", value: "Peak" }]}
+                      chartData={85}
                       chartType="radial"
                     />
-                  </div>
-
-                  {/* Conversation History & AI Suggestions */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <ConversationHistory />
                     <AISuggestions />
-                  </div>
-
-                  {/* General AI Chat */}
-                  <div className="mt-6">
-                    <ChatInterface currentDomain={currentDomain} />
+                    <ConversationHistory />
                   </div>
                 </div>
-              </>
-            ) : currentDomain === "learn" ? (
-              <div className="overflow-y-auto pb-4 space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <QuickNotes />
-                  <TopicSummarizer />
-                </div>
-                <ChatInterface currentDomain={currentDomain} />
-              </div>
-            ) : currentDomain === "health" ? (
-              <div className="overflow-y-auto pb-4 space-y-6">
-                <QuickLog />
-                <ChatInterface currentDomain={currentDomain} />
               </div>
             ) : (
-              <ChatInterface currentDomain={currentDomain} />
+              <div className="flex-1 flex flex-col gap-6 overflow-hidden animate-fade-in">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-1/3">
+                  {currentDomain === "learn" && (
+                    <>
+                      <QuickNotes />
+                      <TopicSummarizer />
+                    </>
+                  )}
+                  {currentDomain === "health" && (
+                    <QuickLog />
+                  )}
+                </div>
+                <div className="flex-1 min-h-0">
+                  <ChatInterface currentDomain={currentDomain} />
+                </div>
+              </div>
             )}
           </div>
           
@@ -157,9 +134,8 @@ const Index = () => {
             isOpen={isPanelOpen}
             onToggle={() => setIsPanelOpen(!isPanelOpen)}
           />
-        </div>
+        </main>
 
-        {/* Voice Call Button */}
         <VoiceCall currentDomain={currentDomain} />
       </div>
     </div>

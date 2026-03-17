@@ -88,7 +88,45 @@ All colors MUST be HSL.
 
 @layer utilities {
   .glass-panel {
-    @apply backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl shadow-2xl;
+    @apply backdrop-blur-xl bg-black/20 border border-white/10 rounded-2xl shadow-glass transition-all duration-300;
+  }
+  
+  .glass-card {
+    @apply glass-panel hover:bg-white/5 hover:border-white/20;
+  }
+
+  .glow-border {
+    @apply relative after:absolute after:inset-0 after:rounded-[inherit] after:p-[1px] after:bg-gradient-to-r after:from-primary/20 after:to-transparent after:-z-10;
+  }
+
+  .aurora-container {
+    @apply fixed inset-0 -z-10 overflow-hidden bg-[#050505];
+  }
+
+  .aurora-blob {
+    @apply absolute rounded-full blur-[120px] opacity-20 animate-float;
+  }
+
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
   }
   
   .gradient-learn {

@@ -17,7 +17,7 @@ if missing_vars:
     raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
 # -------------------------------------
 
-from helpers import (
+from .helpers import (
     store_memory,
     fetch_memories,
     fetch_global_memories,
@@ -90,22 +90,33 @@ async def list_memories_endpoint(domain: str, user_id: str):
 @app.post("/chat")
 async def chat_endpoint(chat_input: ChatInput):
     """Handles chat interactions by retrieving relevant memories and generating a response."""
-    memories = await fetch_global_memories(chat_input.user_id, chat_input.query)
-    context = "\n".join([m['content'] for m in memories])
-    prompt = f"""Based on the following memories, answer the user's query.
-    
-    Memories:\n{context}\n\nQuery: {chat_input.query}
-    
-    Answer:"""
-    
-    openai_client = get_openai_client()
-    response = openai_client.completions.create(
-        model="gpt-3.5-turbo-instruct",
-        prompt=prompt,
-        max_tokens=150,
-    )
-    
-    return {"response": response.choices[0].text.strip(), "memories": memories}
+    try:
+        memories = await fetch_global_memories(chat_input.user_id, chat_input.query)
+        context = "\n".join([f"[{m['domain']}]: {m['content']}" for m in memories])
+        
+        system_prompt = f"""You are LIFEOS AI, a personalized companion.
+        Use the following memories about the user to answer their query.
+        If no memories are provided, answer politely based on general knowledge.
+        
+        Context Memories:\n{context}"""
+        
+        openai_client = get_openai_client()
+        response = openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": chat_input.query}
+            ],
+            max_tokens=300,
+        )
+        
+        return {
+            "response": response.choices[0].message.content.strip(),
+            "memories": memories
+        }
+    except Exception as e:
+        print(f"Error in chat_endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/correct")
 async def correct_memory_endpoint(correction: CorrectionInput):

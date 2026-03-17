@@ -18,41 +18,34 @@ export function VoiceCall({ currentDomain }: VoiceCallProps) {
   const handleStartCall = () => {
     setIsCallActive(true);
     toast({
-      title: "Voice call started",
-      description: "AI voice assistant is now listening...",
+      title: "NEURAL_LINK_ESTABLISHED",
+      description: "Aura is now monitoring audio stream...",
     });
-    // TODO: Integrate OpenAI Realtime API
   };
 
   const handleEndCall = () => {
     setIsCallActive(false);
     setIsMuted(false);
     toast({
-      title: "Call ended",
-      description: "Voice call has been disconnected.",
-    });
-  };
-
-  const handleToggleMute = () => {
-    setIsMuted(!isMuted);
-    toast({
-      title: isMuted ? "Unmuted" : "Muted",
-      description: isMuted ? "Microphone is now active" : "Microphone is muted",
+      title: "LINK_TERMINATED",
+      description: "Audio processing offline.",
     });
   };
 
   return (
-    <div className="fixed bottom-8 right-8 flex items-center gap-3 z-50">
+    <div className="fixed bottom-10 right-10 flex flex-col items-center gap-4 z-50 animate-fade-in">
+      {isCallActive && (
+        <div className="absolute -inset-4 bg-primary/20 blur-3xl animate-pulse rounded-full" />
+      )}
+      
       {isCallActive && (
         <Button
-          onClick={handleToggleMute}
+          onClick={() => setIsMuted(!isMuted)}
           size="icon"
           variant="ghost"
           className={cn(
-            "rounded-full w-12 h-12 backdrop-blur-lg border transition-all",
-            isMuted
-              ? "bg-red-500/20 border-red-500/30 hover:bg-red-500/30"
-              : "bg-white/10 border-white/20 hover:bg-white/20"
+            "rounded-2xl w-12 h-12 glass-panel border-white/10 transition-all duration-500 hover:scale-110 relative z-10",
+            isMuted ? "bg-red-500/20 text-red-400" : "bg-white/10 text-white"
           )}
         >
           {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
@@ -63,21 +56,33 @@ export function VoiceCall({ currentDomain }: VoiceCallProps) {
         onClick={isCallActive ? handleEndCall : handleStartCall}
         size="icon"
         className={cn(
-          "rounded-full w-14 h-14 transition-all hover:scale-110",
+          "rounded-[2rem] w-16 h-16 transition-all duration-500 hover:scale-110 relative z-10 shadow-glass border border-white/10 group",
           isCallActive
-            ? "bg-red-500 hover:bg-red-600"
-            : currentDomain === "learn" && "gradient-learn",
-          currentDomain === "finance" && "gradient-finance",
-          currentDomain === "health" && "gradient-health",
-          currentDomain === "general" && "bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500"
+            ? "bg-red-600 hover:bg-red-500 shadow-red-500/40"
+            : "bg-primary hover:bg-primary/80 shadow-glow-primary"
         )}
       >
         {isCallActive ? (
-          <PhoneOff className="w-6 h-6" />
+          <PhoneOff className="w-7 h-7 text-white animate-pulse" />
         ) : (
-          <Phone className="w-6 h-6" />
+          <div className="relative">
+            <Phone className="w-7 h-7 text-primary-foreground group-hover:rotate-12 transition-transform" />
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white animate-pulse" />
+          </div>
         )}
       </Button>
+      
+      {isCallActive && (
+        <div className="flex gap-1 h-4 items-center">
+          {[...Array(5)].map((_, i) => (
+            <div 
+              key={i} 
+              className="w-1 bg-primary rounded-full animate-bounce shadow-glow-primary"
+              style={{ height: `${Math.random() * 100}%`, animationDelay: `${i * 0.1}s` }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

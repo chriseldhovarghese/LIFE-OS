@@ -35,43 +35,42 @@ const Home = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col overflow-hidden">
-      {/* Subtle animated background */}
-      <div className="fixed inset-0 bg-gradient-to-br from-blue-900/10 via-background to-purple-900/10 opacity-50" />
-      
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full blur-3xl opacity-30 animate-glow" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 rounded-full blur-3xl opacity-30 animate-glow" />
+    <div className="min-h-screen flex flex-col overflow-hidden text-foreground">
+      {/* Dynamic Aurora Background */}
+      <div className="aurora-container">
+        <div className="aurora-blob w-[500px] h-[500px] -top-20 -left-20 bg-purple-600 transition-all duration-1000" />
+        <div className="aurora-blob w-[600px] h-[600px] -bottom-40 -right-20 bg-pink-600 transition-all duration-1000 delay-300" />
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" />
       </div>
 
       {/* Content */}
-      <div className="relative z-10 flex flex-col min-h-screen">
+      <div className="relative z-10 flex flex-col h-screen overflow-y-auto custom-scrollbar">
         <TopNav />
         
-        <main className="flex-1 px-4 py-8 md:px-8 lg:px-12">
-          {/* Header Section */}
-          <header className="text-center mb-12 animate-fade-in">
-            <h1 className="text-5xl md:text-6xl font-bold mb-3 tracking-tight">
-              LIFEOS AI
+        <main className="flex-1 px-8 py-12 lg:px-24">
+          {/* Hero Section */}
+          <header className="text-center mb-16 animate-fade-in">
+            <h1 className="text-6xl md:text-8xl font-black mb-6 tracking-tighter bg-gradient-to-b from-white to-white/20 bg-clip-text text-transparent">
+              AURA LIFE
             </h1>
-            <div className="relative inline-block">
-              <p className="text-2xl md:text-3xl font-light italic text-muted-foreground">
-                Summarise, life.
+            <div className="relative inline-block px-12 py-2">
+              <p className="text-xl md:text-2xl font-bold tracking-[0.4em] text-white/40 uppercase">
+                Intelligence_Synthesized
               </p>
-              <div className="absolute -bottom-2 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent animate-glow" />
+              <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent animate-glow" />
             </div>
           </header>
 
           {/* Dashboard Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12 max-w-[1400px] mx-auto">
             <DashboardCard
               domain="learn"
               icon={Brain}
-              title="Learning Progress"
+              title="Learning_Stream"
               stats={[
-                { label: "Hours Studied", value: `${dashboardData.learn.hoursStudied}h` },
-                { label: "Topics Covered", value: dashboardData.learn.topicsCovered },
-                { label: "Skill Growth", value: `+${dashboardData.learn.skillGrowth}%` },
+                { label: "Uptime", value: `${dashboardData.learn.hoursStudied}h` },
+                { label: "Nodes", value: dashboardData.learn.topicsCovered },
+                { label: "Sync", value: `+${dashboardData.learn.skillGrowth}%` },
               ]}
               chartData={dashboardData.learn.weeklyTrend}
               chartType="line"
@@ -80,11 +79,11 @@ const Home = () => {
             <DashboardCard
               domain="finance"
               icon={Wallet}
-              title="Financial Health"
+              title="Capital_Buffer"
               stats={[
-                { label: "Weekly Savings", value: `$${dashboardData.finance.weeklySavings}` },
-                { label: "Expense Trend", value: `${dashboardData.finance.expenseTrend}%` },
-                { label: "Total Saved", value: `$${dashboardData.finance.totalSaved.toLocaleString()}` },
+                { label: "Inflow", value: `$${dashboardData.finance.weeklySavings}` },
+                { label: "Delta", value: `${dashboardData.finance.expenseTrend}%` },
+                { label: "Total", value: `$${dashboardData.finance.totalSaved.toLocaleString()}` },
               ]}
               chartData={dashboardData.finance.spendingData}
               chartType="bar"
@@ -93,29 +92,27 @@ const Home = () => {
             <DashboardCard
               domain="health"
               icon={Heart}
-              title="Wellness Overview"
+              title="Vital_Signals"
               stats={[
-                { label: "Mood Score", value: `${dashboardData.health.moodScore}/10` },
-                { label: "Steps Today", value: dashboardData.health.steps.toLocaleString() },
-                { label: "Sleep", value: `${dashboardData.health.sleepHours}h` },
+                { label: "Vibe", value: `${dashboardData.health.moodScore}/10` },
+                { label: "Kinetic", value: dashboardData.health.steps.toLocaleString() },
+                { label: "Reset", value: `${dashboardData.health.sleepHours}h` },
               ]}
               chartData={dashboardData.health.weeklyActivity}
               chartType="radial"
             />
           </div>
 
-          {/* Conversation History & AI Suggestions */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-7xl mx-auto mb-8">
+          {/* Secondary Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-[1400px] mx-auto mb-16">
             <ConversationHistory />
             <AISuggestions />
           </div>
 
           {/* Footer */}
-          <footer className="text-center py-8">
-            <p className="text-lg font-light relative inline-block">
-              <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-glow">
-                Your LifeOS. Your AI. Your Growth.
-              </span>
+          <footer className="text-center py-12 border-t border-white/5 bg-white/5 backdrop-blur-xl rounded-t-[4rem] mx-4 lg:mx-24">
+            <p className="text-xs font-black tracking-[0.5em] text-white/20 uppercase">
+              Operational_Environment_V1.0.4_Aura
             </p>
           </footer>
         </main>

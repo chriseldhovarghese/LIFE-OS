@@ -96,23 +96,25 @@ export function DashboardCard({
   return (
     <Card
       className={cn(
-        "glass-panel group hover:scale-[1.02] transition-all duration-300 cursor-pointer relative overflow-hidden",
-        "hover:shadow-2xl hover:shadow-primary/20"
+        "glass-card border-white/5 group hover:scale-[1.02] transition-all duration-500 cursor-pointer relative overflow-hidden",
+        "shadow-glass hover:shadow-glow-primary/20"
       )}
     >
-      {/* Gradient overlay on hover */}
+      {/* Glow Effect */}
       <div
         className={cn(
-          "absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300",
-          domainStyles[domain]
+          "absolute -inset-1 opacity-0 group-hover:opacity-20 transition-opacity duration-500 blur-2xl -z-10",
+          domain === "learn" && "bg-blue-500",
+          domain === "finance" && "bg-emerald-500",
+          domain === "health" && "bg-red-500"
         )}
       />
 
-      <CardHeader className="relative">
+      <CardHeader className="relative pb-2">
         <div className="flex items-center justify-between mb-4">
           <div
             className={cn(
-              "w-12 h-12 rounded-xl flex items-center justify-center",
+              "w-12 h-12 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/10",
               domainStyles[domain]
             )}
           >
@@ -120,35 +122,33 @@ export function DashboardCard({
           </div>
           <div
             className={cn(
-              "px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r",
-              domainGradients[domain],
-              "text-white"
+              "px-3 py-1 rounded-full text-[10px] font-bold tracking-tighter border border-white/10 bg-white/5",
+              "text-white/80 uppercase"
             )}
           >
-            {domain.toUpperCase()}
+            {domain}
           </div>
         </div>
-        <CardTitle className="text-xl font-semibold">{title}</CardTitle>
+        <CardTitle className="text-lg font-bold tracking-tight text-white/90">{title}</CardTitle>
       </CardHeader>
 
-      <CardContent className="relative space-y-4">
+      <CardContent className="relative space-y-4 pt-0">
         {hasData ? (
           <>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2">
               {stats.map((stat, index) => (
-                <div key={index} className="text-center">
-                  <p className="text-xs text-muted-foreground mb-1">{stat.label}</p>
-                  <p className="text-lg font-semibold">{stat.value}</p>
+                <div key={index} className="space-y-1">
+                  <p className="text-[10px] uppercase tracking-widest text-white/40">{stat.label}</p>
+                  <p className="text-base font-bold text-white/90">{stat.value}</p>
                 </div>
               ))}
             </div>
-            <div className="pt-4 border-t border-white/10">{renderChart()}</div>
+            <div className="pt-4 border-t border-white/5 opacity-80">{renderChart()}</div>
           </>
         ) : (
-          <div className="text-center text-muted-foreground py-10">
-            <HelpCircle className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
-            <p>No data available</p>
-            <p className="text-xs">Connect your data sources to see insights</p>
+          <div className="text-center text-white/20 py-8">
+            <HelpCircle className="w-8 h-8 mx-auto mb-2 opacity-20" />
+            <p className="text-xs">No Data Stream</p>
           </div>
         )}
       </CardContent>
