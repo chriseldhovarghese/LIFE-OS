@@ -1,4 +1,3 @@
-
 import os
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Depends
@@ -8,14 +7,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # Load environment variables from .env file
 load_dotenv()
-
-# --- Environment Variable Validation ---
-required_env_vars = ["SUPABASE_URL", "SUPABASE_KEY", "OPENAI_API_KEY"]
-missing_vars = [var for var in required_env_vars if os.environ.get(var) is None]
-
-if missing_vars:
-    raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
-# -------------------------------------
 
 from .helpers import (
     store_memory,
@@ -32,27 +23,17 @@ app = FastAPI(
     root_path="/api",
 )
 
-# Define the origins that should be allowed to make cross-origin requests.
-origins = [
-    "http://localhost:8080",
-    "http://localhost:5173",
-    "https://lifeos-ai.vercel.app", # Replace with your actual domain
-]
-
-# Allow all origins in production for flexibility (or specify more strictly)
-if os.environ.get("VERCEL_ENV"):
-    origins.append("*")
-
-# Add the CORS middleware to the FastAPI application.
+# CORS configuration
+origins = ["*"] # Flexible for Vercel
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if os.environ.get("VERCEL_ENV") else origins,
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Pydantic models for request bodies
+# Pydantic models
 class MemoryInput(BaseModel):
     user_id: str
     content: str
@@ -68,29 +49,47 @@ class CorrectionInput(BaseModel):
     domain: str
 
 # API Endpoints
+@app.get("/health")
+def health_check():
+    """Detailed health check for debugging Vercel deployments."""
+    required = ["SUPABASE_URL", "SUPABASE_KEY", "OPENAI_API_KEY"]
+    missing = [var for var in required if not os.environ.get(var)]
+    return {
+        "status": "operational" if not missing else "degraded",
+        "missing_vars": missing,
+        "vercel_env": os.environ.get("VERCEL_ENV", "local")
+    }
+
 @app.get("/ping")
 def ping():
-    """Health check endpoint."""
     return {"status": "ok"}
 
 @app.post("/memory/{domain}")
 async def save_memory_endpoint(domain: str, memory: MemoryInput):
-    """Saves a memory to the specified domain."""
-    await store_memory(memory.user_id, domain, memory.content, memory.tags)
-    return {"message": f"Memory stored in {domain}"}
+    try:
+        await store_memory(memory.user_id, domain, memory.content, memory.tags)
+        return {"message": f"Memory stored in {domain}"}
+    except Exception as e:
+        print(f"Error saving memory: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Database synchronization failed: {str(e)}")
 
 @app.get("/memory/{domain}/{user_id}")
 async def list_memories_endpoint(domain: str, user_id: str):
-    """Lists all memories for a user in a specific domain."""
-    supabase = get_supabase_client()
-    table_name = f"{domain}_memories"
-    result = supabase.table(table_name).select("*").eq("user_id", user_id).execute()
-    return result.data
+    try:
+        supabase = get_supabase_client()
+        table_name = f"{domain}_memories"
+        result = supabase.table(table_name).select("*").eq("user_id", user_id).execute()
+        return result.data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/chat")
 async def chat_endpoint(chat_input: ChatInput):
     """Handles chat interactions by retrieving relevant memories and generating a response."""
     try:
+        if not os.environ.get("OPENAI_API_KEY"):
+             raise HTTPException(status_code=500, detail="OPENAI_API_KEY is missing from environment")
+
         memories = await fetch_global_memories(chat_input.user_id, chat_input.query)
         context = "\n".join([f"[{m['domain']}]: {m['content']}" for m in memories])
         
@@ -121,9 +120,10 @@ async def chat_endpoint(chat_input: ChatInput):
 @app.post("/correct")
 async def correct_memory_endpoint(correction: CorrectionInput):
     """Corrects a memory and its embedding."""
-    supabase = get_supabase_client()
-    table_name = f"{correction.domain}_memories"
-    
-    supabase.table(table_name).update({"content": correction.corrected_content}).eq("id", correction.memory_id).execute()
-    
-    return {"message": "Memory corrected successfully"}
+    try:
+        supabase = get_supabase_client()
+        table_name = f"{correction.domain}_memories"
+        supabase.table(table_name).update({"content": correction.corrected_content}).eq("id", correction.memory_id).execute()
+        return {"message": "Memory corrected successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
