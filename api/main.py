@@ -8,10 +8,10 @@ from typing import List, Optional
 from supabase import create_client
 from openai import OpenAI
 
-# Load environment variables
 load_dotenv()
 
-# --- Models ---
+app = FastAPI()
+
 class ChatInput(BaseModel):
     user_id: str
     query: str
@@ -21,24 +21,24 @@ class MemoryInput(BaseModel):
     content: str
     tags: Optional[List[str]] = []
 
-# --- App Instance ---
-app = FastAPI()
-
-# --- Clients ---
 def get_clients():
     url = os.environ.get("SUPABASE_URL")
     key = os.environ.get("SUPABASE_KEY")
     o_key = os.environ.get("OPENAI_API_KEY")
     
     if not all([url, key, o_key]):
-        raise ValueError("Environment variables not configured in Vercel")
+        raise ValueError("Missing environment variables")
         
     return create_client(url, key), OpenAI(api_key=o_key)
 
-# --- Endpoints ---
 @app.get("/api/health")
 async def health():
-    return {"status": "Aura Final Operational", "env": "vercel"}
+    o_key = os.environ.get("OPENAI_API_KEY", "")
+    return {
+        "status": "Operational",
+        "key_hint": f"{o_key[:3]}..." if o_key else "None",
+        "env": "pdx1"
+    }
 
 @app.get("/api/ping")
 async def ping():
