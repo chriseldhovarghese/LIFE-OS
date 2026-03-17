@@ -1,5 +1,9 @@
 
-export const API_URL = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' ? `${window.location.origin}/api` : "http://localhost:8000/api");
+// In Vercel, the API is served from the same origin under /api
+const isDevelopment = import.meta.env.MODE === 'development';
+export const API_URL = isDevelopment 
+  ? "http://localhost:8000/api" 
+  : "/api";
 
 export const API_ENDPOINTS = {
   CHAT: `${API_URL}/chat`,
