@@ -1,5 +1,5 @@
 fastapi
 supabase
 openai
-python-dotenv
 pydantic
+python-dotenv
