@@ -3,3 +3,5 @@ supabase
 openai
 pydantic
 python-dotenv
+httpx
+postgrest
