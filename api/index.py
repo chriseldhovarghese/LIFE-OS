@@ -5,6 +5,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Optional
+from supabase import create_client
+from openai import OpenAI
 
 # Load environment variables
 load_dotenv()
@@ -21,93 +23,81 @@ class MemoryInput(BaseModel):
     content: str
     tags: Optional[List[str]] = []
 
-# --- Simple Endpoints for Verification ---
-@app.get("/api/ping")
-def ping():
-    return {"status": "pong", "env": os.environ.get("VERCEL_ENV", "local")}
+# --- Clients ---
+def get_clients():
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_KEY")
+    o_key = os.environ.get("OPENAI_API_KEY")
+    
+    if not all([url, key, o_key]):
+        raise ValueError("Missing environment variables on Vercel")
+        
+    return create_client(url, key), OpenAI(api_key=o_key)
 
+# --- Endpoints ---
 @app.get("/api/health")
 def health():
-    return {
-        "status": "Aura Core Operational",
-        "has_openai": bool(os.environ.get("OPENAI_API_KEY")),
-        "has_supabase": bool(os.environ.get("SUPABASE_URL"))
-    }
+    return {"status": "Aura Phoenix Live", "vars": bool(os.environ.get("OPENAI_API_KEY"))}
 
-# --- Main Handlers ---
 @app.post("/api/chat")
-async def chat(chat_input: ChatInput):
+async def chat(input_data: ChatInput):
     try:
-        from supabase import create_client
-        from openai import OpenAI
+        supabase, openai = get_clients()
         
-        s_url = os.environ.get("SUPABASE_URL")
-        s_key = os.environ.get("SUPABASE_KEY")
-        o_key = os.environ.get("OPENAI_API_KEY")
+        # 1. Embed
+        emb = openai.embeddings.create(input=[input_data.query], model="text-embedding-ada-002")
+        vector = emb.data[0].embedding
         
-        if not all([s_url, s_key, o_key]):
-            return JSONResponse(status_code=500, content={"error": "Missing API Keys in Vercel settings"})
-
-        supabase = create_client(s_url, s_key)
-        openai = OpenAI(api_key=o_key)
-
-        # 1. Embedding
-        emb_res = openai.embeddings.create(input=[chat_input.query], model="text-embedding-ada-002")
-        embedding = emb_res.data[0].embedding
-
-        # 2. RAG Match
-        rpc_res = supabase.rpc("match_global_memories", {
-            "p_user_id": chat_input.user_id,
-            "query_embedding": embedding,
+        # 2. Search
+        rpc = supabase.rpc("match_global_memories", {
+            "p_user_id": input_data.user_id,
+            "query_embedding": vector,
             "match_threshold": 0.5,
             "match_count": 5
         }).execute()
         
-        memories = rpc_res.data or []
+        memories = rpc.data or []
         context = "\n".join([f"[{m.get('domain', 'general')}]: {m.get('content', '')}" for m in memories])
         
-        # 3. Completion
-        chat_res = openai.chat.completions.create(
+        # 3. AI
+        res = openai.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": f"You are AURA. Context:\n{context}"},
-                {"role": "user", "content": chat_input.query}
+                {"role": "user", "content": input_data.query}
             ],
             max_tokens=400
         )
         
-        return {"response": chat_res.choices[0].message.content}
-        
+        return {"response": res.choices[0].message.content}
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e), "traceback": traceback.format_exc()})
+        return JSONResponse(status_code=500, content={"error": str(e), "trace": traceback.format_exc()})
 
 @app.post("/api/memory/{domain}")
-async def save_memory(domain: str, memory: MemoryInput):
+async def memory(domain: str, input_data: MemoryInput):
     try:
-        from supabase import create_client
-        from openai import OpenAI
+        supabase, openai = get_clients()
         
-        supabase = create_client(os.environ.get("SUPABASE_URL"), os.environ.get("SUPABASE_KEY"))
-        openai = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        # 1. Embed
+        emb = openai.embeddings.create(input=[input_data.content], model="text-embedding-ada-002")
+        vector = emb.data[0].embedding
         
-        emb_res = openai.embeddings.create(input=[memory.content], model="text-embedding-ada-002")
-        embedding = emb_res.data[0].embedding
-        
+        # 2. Save
         supabase.table(f"{domain}_memories").insert({
-            "user_id": memory.user_id,
-            "content": memory.content,
-            "embedding": embedding,
-            "tags": memory.tags
+            "user_id": input_data.user_id,
+            "content": input_data.content,
+            "embedding": vector,
+            "tags": input_data.tags
         }).execute()
 
         supabase.table("global_memories").insert({
-            "user_id": memory.user_id,
+            "user_id": input_data.user_id,
             "domain": domain,
-            "content": memory.content,
-            "embedding": embedding,
-            "tags": memory.tags
+            "content": input_data.content,
+            "embedding": vector,
+            "tags": input_data.tags
         }).execute()
         
-        return {"status": "success"}
+        return {"status": "committed"}
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e), "traceback": traceback.format_exc()})
+        return JSONResponse(status_code=500, content={"error": str(e)})
