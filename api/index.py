@@ -1,7 +1,9 @@
 import os
 import json
+import traceback
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Optional
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,6 +24,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --- Diagnostic Middleware ---
+@app.middleware("http")
+async def catch_exceptions_middleware(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception as e:
+        # Return the actual Python error to the browser for debugging
+        error_trace = traceback.format_exc()
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": str(e),
+                "traceback": error_trace,
+                "path": request.url.path
+            }
+        )
+
 # --- Models ---
 class MemoryInput(BaseModel):
     user_id: str
@@ -34,88 +53,77 @@ class ChatInput(BaseModel):
 
 # --- Core Logic ---
 def get_clients():
-    """Lazy init clients with explicit error handling."""
     s_url = os.environ.get("SUPABASE_URL")
     s_key = os.environ.get("SUPABASE_KEY")
     o_key = os.environ.get("OPENAI_API_KEY")
     
     if not all([s_url, s_key, o_key]):
-        missing = [k for k, v in {"SUPABASE_URL":s_url, "SUPABASE_KEY":s_key, "OPENAI_API_KEY":o_key}.items() if not v]
-        raise HTTPException(status_code=500, detail=f"Missing Keys: {', '.join(missing)}")
+        raise HTTPException(status_code=500, detail="Environment variables missing")
     
     return create_client(s_url, s_key), OpenAI(api_key=o_key)
-
-def generate_embedding(client: OpenAI, text: str):
-    """Generate embedding using OpenAI."""
-    try:
-        response = client.embeddings.create(input=[text], model="text-embedding-ada-002")
-        return response.data[0].embedding
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"OpenAI Embedding Error: {str(e)}")
 
 # --- Endpoints ---
 @app.get("/health")
 def health():
     return {"status": "Aura Core Operational", "keys_set": bool(os.environ.get("OPENAI_API_KEY"))}
 
+@app.get("/ping")
+def ping():
+    return {"status": "pong"}
+
 @app.post("/memory/{domain}")
 async def save_memory(domain: str, memory: MemoryInput):
-    try:
-        supabase, openai = get_clients()
-        embedding = generate_embedding(openai, memory.content)
-        
-        # Insert into domain-specific table
-        res_domain = supabase.table(f"{domain}_memories").insert({
-            "user_id": memory.user_id,
-            "content": memory.content,
-            "embedding": embedding,
-            "tags": memory.tags
-        }).execute()
+    supabase, openai = get_clients()
+    
+    # Generate embedding
+    emb_res = openai.embeddings.create(input=[memory.content], model="text-embedding-ada-002")
+    embedding = emb_res.data[0].embedding
+    
+    # Insert domain
+    supabase.table(f"{domain}_memories").insert({
+        "user_id": memory.user_id,
+        "content": memory.content,
+        "embedding": embedding,
+        "tags": memory.tags
+    }).execute()
 
-        # Insert into global table
-        res_global = supabase.table("global_memories").insert({
-            "user_id": memory.user_id,
-            "domain": domain,
-            "content": memory.content,
-            "embedding": embedding,
-            "tags": memory.tags
-        }).execute()
-        
-        return {"status": "success", "message": f"Memory committed to {domain}"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Aura Memory Error: {str(e)}")
+    # Insert global
+    supabase.table("global_memories").insert({
+        "user_id": memory.user_id,
+        "domain": domain,
+        "content": memory.content,
+        "embedding": embedding,
+        "tags": memory.tags
+    }).execute()
+    
+    return {"status": "success"}
 
 @app.post("/chat")
 async def chat(chat_input: ChatInput):
-    try:
-        supabase, openai = get_clients()
-        embedding = generate_embedding(openai, chat_input.query)
-        
-        # Match global memories using Supabase RPC
-        rpc_res = supabase.rpc("match_global_memories", {
-            "p_user_id": chat_input.user_id,
-            "query_embedding": embedding,
-            "match_threshold": 0.5,
-            "match_count": 5
-        }).execute()
-        
-        memories = rpc_res.data or []
-        context = "\n".join([f"[{m.get('domain', 'general')}]: {m.get('content', '')}" for m in memories])
-        
-        system_prompt = f"You are AURA, an intelligent LifeOS. Context from user history:\n{context}\nAnswer based on this context if relevant."
-        
-        chat_res = openai.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": chat_input.query}
-            ],
-            max_tokens=400
-        )
-        
-        return {
-            "response": chat_res.choices[0].message.content,
-            "context_count": len(memories)
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Aura Chat Error: {str(e)}")
+    supabase, openai = get_clients()
+    
+    # Generate query embedding
+    emb_res = openai.embeddings.create(input=[chat_input.query], model="text-embedding-ada-002")
+    embedding = emb_res.data[0].embedding
+    
+    # RPC Match
+    rpc_res = supabase.rpc("match_global_memories", {
+        "p_user_id": chat_input.user_id,
+        "query_embedding": embedding,
+        "match_threshold": 0.5,
+        "match_count": 5
+    }).execute()
+    
+    memories = rpc_res.data or []
+    context = "\n".join([f"[{m.get('domain', 'general')}]: {m.get('content', '')}" for m in memories])
+    
+    chat_res = openai.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": f"You are AURA. Context:\n{context}"},
+            {"role": "user", "content": chat_input.query}
+        ],
+        max_tokens=400
+    )
+    
+    return {"response": chat_res.choices[0].message.content}
